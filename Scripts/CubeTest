@@ -1,0 +1,9 @@
+import bge
+
+keyboard = bge.logic.keyboard
+inputs = keyboard.inputs
+
+if inputs[bge.events.TKEY].values[-1]:
+    print("aaaaaa")
+
+ 
