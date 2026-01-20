@@ -1,0 +1,25 @@
+import bge
+
+
+def main():
+
+    cont = bge.logic.getCurrentController()
+    own = cont.owner
+
+    sens = cont.sensors['mySensor']
+    actu = cont.actuators['myActuator']
+
+    if sens.positive:
+        cont.activate(actu)
+    else:
+        cont.deactivate(actu)
+
+main()
+
+def animation():
+    
+    anim = bge.logic.getCurrentController().owner
+    anim.playAction("MyAction", 1, 30, layer=0, playMode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0)
+
+
+
