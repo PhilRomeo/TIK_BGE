@@ -1,0 +1,184 @@
+import bge
+from bge import logic, types, render
+from mathutils import Vector
+
+debugMode = True
+
+SPRINT_SPEED = 0.2
+
+GROUND_DISTANCE = 0.15     # how far below the player to check
+GROUND_PROP = "ground"    # property on ground objects
+
+IDLE_THRESHOLD = 0.02
+RUN_THRESHOLD  = 0.3
+
+canMove = True
+
+scene = bge.logic.getCurrentScene()
+camHolder = scene.objects["Camera Holder"]
+
+## -- GROUND CHECK --
+def is_grounded(own):
+    origin = own.worldPosition.copy()
+    origin.z += -0.05
+    
+    # Cast straight down in world space
+    direction = Vector((0, 0, -1))
+    distance = GROUND_DISTANCE
+
+    distance = GROUND_DISTANCE
+    target = origin.copy()
+    target.z -= distance
+
+    hit, pos, normal = own.rayCast(target, origin, distance, GROUND_PROP)
+
+    if not hit:
+        return False
+
+    # Prevent wall detection
+    return normal.z > 0.6
+# --
+
+# Updates every frame.
+def update(cont):
+    # Skip if we can't move.
+    if canMove == False:
+        return
+    
+    co = bge.logic.getCurrentController()
+    owner = co.owner
+    
+    own = cont.owner
+    keyboard = bge.logic.keyboard.inputs
+    
+    # 1. Configuration
+    MAX_SPEED = 0.25
+    ACCEL_RATE = 0.05  # Value between 0.0 and 1.0 (Higher = Snappier)
+    BONUS = 0.0
+    
+    # Initialize a custom property to store current speed if it doesn't exist
+    if "current_speed" not in own:
+        own["current_speed"] = Vector([0.0, 0.0, 0.0])
+
+    # 2. Get Input and Set Target Velocity
+    target_vel = Vector([0.0, 0.0, 0.0])
+    
+    moveSpeed = own["current_speed"].length    
+
+    # Get movement input.
+    if keyboard[bge.events.LEFTSHIFTKEY].values[-1]: BONUS = SPRINT_SPEED
+    if keyboard[bge.events.WKEY].values[-1]: target_vel.y = MAX_SPEED + BONUS
+    elif keyboard[bge.events.SKEY].values[-1]: target_vel.y = -MAX_SPEED        
+    if keyboard[bge.events.AKEY].values[-1]: target_vel.x = -MAX_SPEED        
+    elif keyboard[bge.events.DKEY].values[-1]: target_vel.x = MAX_SPEED
+
+    # 3. Lerp Speed (Smooth Transition)
+    # This blends the current speed towards the target speed
+    own["current_speed"] = own["current_speed"].lerp(target_vel, ACCEL_RATE)
+    
+
+    # 4. Apply Movement
+    own.applyMovement(own["current_speed"], True)
+    
+    # Ground Check
+
+    grounded = is_grounded(own)
+
+    # Debug (optional)
+    if grounded:
+        own.color = [0, 1, 0, 1]  # green
+        
+    else:
+        own.color = [1, 0, 0, 1]  # red
+
+    anim_state = get_anim_state(moveSpeed, grounded)
+    update_animation(camHolder, anim_state)
+    
+    frame = own.getActionFrame(0)
+    update_footsteps(own, anim_state, frame, grounded)
+# ---
+
+# -- ANIMATION STATE --
+def get_anim_state(moveSpeed, grounded):
+    if not grounded:
+        return None  # no walk/run in air
+
+    if moveSpeed < IDLE_THRESHOLD:
+        return "Idle"
+
+    if moveSpeed > RUN_THRESHOLD:
+        return "Run"
+    
+    return "Walk"
+# ---
+
+# -- UPDATE ANIMATION
+def update_animation(own, anim_state):
+    if anim_state is None:
+        return
+
+    # Prevent restarting the same animation
+    if own.get("anim") == anim_state:
+        return
+
+    own["anim"] = anim_state
+
+    if anim_state == "Idle":
+        #own.playAction("Idle", 1, 60, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
+        own.playAction("Idle", 1, 60, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)            
+
+    elif anim_state == "Walk":
+        #own.playAction("Walk", 1, 31, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
+        own.playAction("Walk", 1, 31, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)    
+
+    elif anim_state == "Run":
+        #own.playAction("Run", 1, 17, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
+        own.playAction("Run", 1, 17, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)         
+# ---
+
+# -- FOOTSTEP SOUNDS --        
+def update_footsteps(own, action_name, action_frame, grounded):
+    if not grounded:
+        return
+
+    # Store previous frame
+    prev_frame = own.get("prev_anim_frame", action_frame)
+    own["prev_anim_frame"] = action_frame
+
+    if action_name == "Walk":
+        steps = (19, 24)
+        end_frame = 31
+        speaker = own.children.get("FootstepWalk")
+
+    elif action_name == "Run":
+        steps = (5, 13)
+        end_frame = 17
+        speaker = own.children.get("FootstepRun")
+
+    else:
+        return
+
+    if not speaker:
+        return
+
+    for step in steps:
+        # Normal crossing
+        if prev_frame < step <= action_frame:
+            speaker.play()
+            debug("Step Normal")
+
+        # Loop crossing (end → start)
+        elif prev_frame > action_frame:
+            if prev_frame < step + end_frame or action_frame >= step:
+                speaker.play()
+                debug("Step loop crossing")
+                
+        debug("Oh okay")
+# ---
+
+# Custom Debug function.    
+def debug(text):
+    if debugMode != True:
+        return
+    
+    print(text)
