@@ -53,7 +53,7 @@ def update(cont):
     
     # 1. Configuration
     MAX_SPEED = 0.25
-    ACCEL_RATE = 0.05  # Value between 0.0 and 1.0 (Higher = Snappier)
+    ACCEL_RATE = 0.1  # Value between 0.0 and 1.0 (Higher = Snappier)
     BONUS = 0.0
     
     # Initialize a custom property to store current speed if it doesn't exist
@@ -94,8 +94,8 @@ def update(cont):
     anim_state = get_anim_state(moveSpeed, grounded)
     update_animation(camHolder, anim_state)
     
-    frame = own.getActionFrame(0)
-    update_footsteps(own, anim_state, frame, grounded)
+    #frame = own.getActionFrame(0)
+    #update_footsteps(own, anim_state, frame, grounded)
 # ---
 
 # -- ANIMATION STATE --
@@ -124,16 +124,16 @@ def update_animation(own, anim_state):
     own["anim"] = anim_state
 
     if anim_state == "Idle":
-        #own.playAction("Idle", 1, 60, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
-        own.playAction("Idle", 1, 60, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)            
-
+        own.playAction("Idle", 1, 60, layer=0, priority=0, blendin=15, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=1.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)            
+        #bge.logic.sendMessage("Idle", "", "Camera Holder", "Player")
+    
     elif anim_state == "Walk":
-        #own.playAction("Walk", 1, 31, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
-        own.playAction("Walk", 1, 31, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)    
+        own.playAction("Walk", 1, 31, layer=0, priority=0, blendin=15, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=1.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)
+        #bge.logic.sendMessage("Walk", "", "Camera Holder", "Player")
 
     elif anim_state == "Run":
-        #own.playAction("Run", 1, 17, layer=0, play_mode=bge.logic.KX_ACTION_MODE_LOOP, speed=1.0, blendin=10.0)
-        own.playAction("Run", 1, 17, layer=0, priority=0, blendin=10, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=0.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)         
+        own.playAction("Run", 1, 17, layer=0, priority=0, blendin=15, play_mode=bge.logic.KX_ACTION_MODE_LOOP, layer_weight=1.0, ipo_flags=0, speed=1.0, blend_mode=bge.logic.KX_ACTION_BLEND_BLEND)         
+        #bge.logic.sendMessage("Run", "", "Camera Holder", "Player")
 # ---
 
 # -- FOOTSTEP SOUNDS --        
@@ -172,8 +172,6 @@ def update_footsteps(own, action_name, action_frame, grounded):
             if prev_frame < step + end_frame or action_frame >= step:
                 speaker.play()
                 debug("Step loop crossing")
-                
-        debug("Oh okay")
 # ---
 
 # Custom Debug function.    
